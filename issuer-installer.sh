@@ -1,56 +1,28 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/bash
+set -e
 
-REPO="mdaroshprodhen/issuer-agent"
-CLONE_DIR="${HOME}/issuer-agent"
-
-echo "=============================================="
-echo "    12ID Issuer Agent Auto Installer"
-echo "=============================================="
-echo
-
-read -s -p "Enter GitHub Personal Access Token: " GHTOKEN
-echo
-if [ -z "$GHTOKEN" ]; then
-  echo "Token is empty. Exiting."
-  exit 1
+# =========================
+# 1️⃣ Get GitHub Token
+# =========================
+if [ -z "$GITHUB_TOKEN" ]; then
+    echo "Enter your GitHub Personal Access Token (with repo access):"
+    read -r -s GITHUB_TOKEN
 fi
 
-CLONE_URL="https://${GHTOKEN}@github.com/${REPO}.git"
+# =========================
+# 2️⃣ Clone Private Repo Using Token
+# =========================
+PRIVATE_REPO="mdaroshprodhen/issuer-agent"
+CLONE_DIR="$HOME/issuer-agent"
 
-if [ -d "$CLONE_DIR" ]; then
-    echo "Removing old installation directory..."
-    rm -rf "$CLONE_DIR"
-fi
+echo "Cloning private repository..."
+rm -rf "$CLONE_DIR"
+git clone https://$GITHUB_TOKEN@github.com/$PRIVATE_REPO.git "$CLONE_DIR"
 
-echo "Cloning repository..."
-git clone "$CLONE_URL" "$CLONE_DIR"
-
+# =========================
+# 3️⃣ Run issuer-start.sh
+# =========================
 cd "$CLONE_DIR"
-git remote set-url origin "https://github.com/${REPO}.git"
-echo "Token removed from git config."
-
-echo "Installing Docker (if needed)..."
-if ! command -v docker >/dev/null 2>&1; then
-  sudo apt update
-  sudo apt install -y ca-certificates curl gnupg lsb-release
-  curl -fsSL https://download.docker.com/linux/ubuntu/gpg |
-    sudo gpg --dearmour -o /usr/share/keyrings/docker.gpg
-  echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker.gpg] \
-    https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" |
-    sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-  sudo apt update
-  sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-fi
-
-sudo usermod -aG docker "$USER" || true
-
 chmod +x issuer-start.sh
+./issuer-start.sh
 
-echo "Starting services..."
-sudo ./issuer-start.sh
-
-echo
-echo "✅ Setup complete!"
-echo "URL: http://localhost:7000"
-echo "If you were added to docker group: Logout & login again"
